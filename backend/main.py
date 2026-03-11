@@ -10,7 +10,7 @@ from database import engine, Base, get_db
 from models import User, Vivienda, FotoVivienda, FallaGeologica  # noqa: F401 - register tables
 from routes import api_router
 from routes.mapa import get_mapa_html
-from utils.auth import get_password_hash
+import bcrypt
 
 settings = get_settings()
 app = FastAPI(title=settings.APP_NAME)
@@ -58,10 +58,9 @@ def reset_imbio(
         raise HTTPException(status_code=404, detail="No encontrado")
     try:
         user = db.query(User).filter(User.email == EMAIL_IMBIO).first()
-        # bcrypt solo admite hasta 72 bytes; truncar aquí por si utils/auth no está actualizado
-        pwd_bytes = (PASSWORD_IMBIO or "").encode("utf-8")[:72]
-        pwd_ok = pwd_bytes.decode("utf-8", errors="ignore") or "IMBIO2026"
-        hashed = get_password_hash(pwd_ok)
+        # Usar bcrypt directo (9 bytes) para evitar límite 72 bytes de passlib
+        pwd = b"IMBIO2026"
+        hashed = bcrypt.hashpw(pwd, bcrypt.gensalt()).decode("utf-8")
         if user:
             user.hashed_password = hashed
             user.full_name = FULL_NAME_IMBIO

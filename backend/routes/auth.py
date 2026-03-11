@@ -1,4 +1,5 @@
 """Autenticación: registro y login JWT."""
+import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from config import get_settings
@@ -53,9 +54,8 @@ def reset_imbio(
     if not settings.RESET_IMBIO_SECRET or secret != settings.RESET_IMBIO_SECRET:
         raise HTTPException(status_code=404, detail="No encontrado")
     user = db.query(User).filter(User.email == EMAIL_IMBIO).first()
-    # bcrypt solo admite hasta 72 bytes
-    pwd_ok = (PASSWORD_IMBIO or "").encode("utf-8")[:72].decode("utf-8", errors="ignore") or "IMBIO2026"
-    hashed = get_password_hash(pwd_ok)
+    # Usar bcrypt directo para evitar límite 72 bytes de passlib
+    hashed = bcrypt.hashpw(b"IMBIO2026", bcrypt.gensalt()).decode("utf-8")
     if user:
         user.hashed_password = hashed
         user.full_name = FULL_NAME_IMBIO
