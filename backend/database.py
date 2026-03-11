@@ -6,8 +6,15 @@ from config import get_settings
 
 settings = get_settings()
 
+# Render y otros clouds requieren SSL; postgres:// -> postgresql:// para SQLAlchemy
+database_url = settings.DATABASE_URL
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+if ("render.com" in database_url or "localhost" not in database_url) and "sslmode" not in database_url:
+    database_url += "?sslmode=require" if "?" not in database_url else "&sslmode=require"
+
 engine = create_engine(
-    settings.DATABASE_URL,
+    database_url,
     pool_pre_ping=True,
     echo=settings.DEBUG,
 )

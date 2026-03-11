@@ -41,21 +41,28 @@ def reset_imbio(
     db: Session = Depends(get_db),
 ):
     """Crea o restablece usuario imbio@pabellon.gob.mx / IMBIO2026. Uso: ?secret=TU_CLAVE"""
+    import traceback
     s = get_settings()
     if not s.RESET_IMBIO_SECRET or secret != s.RESET_IMBIO_SECRET:
         raise HTTPException(status_code=404, detail="No encontrado")
-    user = db.query(User).filter(User.email == EMAIL_IMBIO).first()
-    hashed = get_password_hash(PASSWORD_IMBIO)
-    if user:
-        user.hashed_password = hashed
-        user.full_name = FULL_NAME_IMBIO
-        user.is_active = True
+    try:
+        user = db.query(User).filter(User.email == EMAIL_IMBIO).first()
+        hashed = get_password_hash(PASSWORD_IMBIO)
+        if user:
+            user.hashed_password = hashed
+            user.full_name = FULL_NAME_IMBIO
+            user.is_active = True
+            db.commit()
+            return {"ok": True, "message": "Contraseña actualizada para " + EMAIL_IMBIO}
+        user = User(email=EMAIL_IMBIO, hashed_password=hashed, full_name=FULL_NAME_IMBIO)
+        db.add(user)
         db.commit()
-        return {"ok": True, "message": "Contraseña actualizada para " + EMAIL_IMBIO}
-    user = User(email=EMAIL_IMBIO, hashed_password=hashed, full_name=FULL_NAME_IMBIO)
-    db.add(user)
-    db.commit()
-    return {"ok": True, "message": "Usuario creado: " + EMAIL_IMBIO}
+        return {"ok": True, "message": "Usuario creado: " + EMAIL_IMBIO}
+    except Exception as e:
+        db.rollback()
+        err = traceback.format_exc()
+        print("reset_imbio error:", err)  # Log en Render
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
 @app.get("/")
@@ -74,5 +81,5 @@ def startup():
     """Crear tablas si no existen."""
     try:
         Base.metadata.create_all(bind=engine)
-    except Exception:
-        pass  # Si falla (ej. sin PostGIS), la app sigue para que /docs y /api respondan
+    except Exception as e:
+        print("create_all tables warning:", e)  # Log en Render para ver si falla la BD
