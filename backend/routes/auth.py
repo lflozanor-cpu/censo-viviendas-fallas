@@ -18,9 +18,10 @@ FULL_NAME_IMBIO = "IMBIO Censo"
 def register(data: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == data.email).first():
         raise HTTPException(status_code=400, detail="Email ya registrado")
+    pwd = _truncate_password_72(data.password or "")
     user = User(
         email=data.email,
-        hashed_password=get_password_hash(data.password),
+        hashed_password=get_password_hash(pwd),
         full_name=data.full_name,
     )
     db.add(user)
@@ -29,10 +30,19 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
     return user
 
 
+def _truncate_password_72(password: str) -> str:
+    """bcrypt solo admite hasta 72 bytes; truncar aquí para no depender de utils."""
+    if not password:
+        return ""
+    b = (password or "").encode("utf-8")
+    return b[:72].decode("utf-8", errors="ignore") if len(b) > 72 else password
+
+
 @router.post("/login", response_model=Token)
 def login(data: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
-    if not user or not verify_password(data.password, user.hashed_password):
+    plain = _truncate_password_72(data.password or "")
+    if not user or not verify_password(plain, user.hashed_password):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Usuario inactivo")
