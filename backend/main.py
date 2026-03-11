@@ -23,6 +23,12 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api")
 
 
+@app.get("/api")
+def api_root():
+    """Respuesta en /api para que no dé 404 al verificar la URL."""
+    return {"message": "Censo Viviendas Fallas API", "docs": "/docs", "mapa": "/mapa", "login": "/api/auth/login"}
+
+
 @app.get("/")
 def root():
     return {"app": settings.APP_NAME, "docs": "/docs", "mapa": "/mapa"}
@@ -37,4 +43,7 @@ def pagina_mapa():
 @app.on_event("startup")
 def startup():
     """Crear tablas si no existen."""
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        pass  # Si falla (ej. sin PostGIS), la app sigue para que /docs y /api respondan

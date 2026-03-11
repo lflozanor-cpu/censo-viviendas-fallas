@@ -12,12 +12,14 @@ engine = create_engine(
     echo=settings.DEBUG,
 )
 
-# Habilitar extensión PostGIS en conexiones
+# Habilitar extensión PostGIS en conexiones (opcional: si falla, la app sigue)
 def load_postgis_extension(dbapi_conn, connection_record):
     cursor = dbapi_conn.cursor()
     try:
         cursor.execute("CREATE EXTENSION IF NOT EXISTS postgis")
         dbapi_conn.commit()
+    except Exception:
+        pass  # PostGIS no disponible (ej. Render); la app arranca igual
     finally:
         cursor.close()
 
