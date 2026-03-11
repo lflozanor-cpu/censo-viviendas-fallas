@@ -41,8 +41,17 @@ def _truncate_password_72(password: str) -> str:
 @router.post("/login", response_model=Token)
 def login(data: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
-    plain = _truncate_password_72(data.password or "")
-    if not user or not verify_password(plain, user.hashed_password):
+    if not user:
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+    # Usar bcrypt directo (máx 72 bytes) para no depender de passlib y evitar 500 en Render
+    plain_bytes = (data.password or "").encode("utf-8")[:72]
+    try:
+        hashed_bytes = user.hashed_password.encode("utf-8") if isinstance(user.hashed_password, str) else user.hashed_password
+        if not bcrypt.checkpw(plain_bytes, hashed_bytes):
+            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+    except HTTPException:
+        raise
+    except Exception:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Usuario inactivo")
