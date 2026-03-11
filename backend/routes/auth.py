@@ -53,7 +53,9 @@ def reset_imbio(
     if not settings.RESET_IMBIO_SECRET or secret != settings.RESET_IMBIO_SECRET:
         raise HTTPException(status_code=404, detail="No encontrado")
     user = db.query(User).filter(User.email == EMAIL_IMBIO).first()
-    hashed = get_password_hash(PASSWORD_IMBIO)
+    # bcrypt solo admite hasta 72 bytes
+    pwd_ok = (PASSWORD_IMBIO or "").encode("utf-8")[:72].decode("utf-8", errors="ignore") or "IMBIO2026"
+    hashed = get_password_hash(pwd_ok)
     if user:
         user.hashed_password = hashed
         user.full_name = FULL_NAME_IMBIO
