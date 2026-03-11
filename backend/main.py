@@ -1,7 +1,8 @@
 """API Censo de Viviendas sobre Fallas Geológicas."""
+import traceback
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 
 from config import get_settings
@@ -13,6 +14,17 @@ from utils.auth import get_password_hash
 
 settings = get_settings()
 app = FastAPI(title=settings.APP_NAME)
+
+
+@app.exception_handler(Exception)
+def unhandled_exception_handler(request, exc):
+    """Devuelve 500 en JSON con el error para poder depurar en Render."""
+    tb = traceback.format_exc()
+    print("Unhandled exception:", tb)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "type": type(exc).__name__, "traceback": tb},
+    )
 
 EMAIL_IMBIO = "imbio@pabellon.gob.mx"
 PASSWORD_IMBIO = "IMBIO2026"
@@ -41,7 +53,6 @@ def reset_imbio(
     db: Session = Depends(get_db),
 ):
     """Crea o restablece usuario imbio@pabellon.gob.mx / IMBIO2026. Uso: ?secret=TU_CLAVE"""
-    import traceback
     s = get_settings()
     if not s.RESET_IMBIO_SECRET or secret != s.RESET_IMBIO_SECRET:
         raise HTTPException(status_code=404, detail="No encontrado")
