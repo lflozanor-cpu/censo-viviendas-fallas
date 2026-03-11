@@ -25,7 +25,10 @@ class Settings(BaseSettings):
     
     # Cálculo IRV
     BUFFER_FALLA_METROS: float = 5.0
-    
+
+    # Clave para la ruta de restablecer usuario imbio (opcional; si no se define, la ruta no hace nada)
+    RESET_IMBIO_SECRET: str | None = None
+
     class Config:
         env_file = ".env"
         case_sensitive = True
