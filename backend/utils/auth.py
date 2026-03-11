@@ -15,12 +15,19 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
+def _truncate_for_bcrypt(password: str) -> str:
+    """bcrypt solo admite hasta 72 bytes."""
+    if len(password.encode("utf-8")) <= 72:
+        return password
+    return password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
+
+
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return pwd_context.verify(_truncate_for_bcrypt(plain), hashed)
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    return pwd_context.hash(_truncate_for_bcrypt(password))
 
 
 def create_access_token(data: dict) -> str:
